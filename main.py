@@ -1,3 +1,6 @@
+from PySimpleAutomata import automata_IO
+
+
 class StateNFA:
     def __init__(self, name, n):
         self.symbols = n
@@ -185,6 +188,32 @@ class DFA:
         for i in string:
             q = q.map[self.alpht.index(i)]
         return q.accept
+
+    def showimage(self):
+        dot = {'alphabet': set(self.alpht), 'states': set(), 'initial_states': set(), 'accepting_states': set(),
+               'transitions': {}}
+        t = dict()
+        for i in self.states:
+            dot['states'].add(i.name)
+            if i.start:
+                dot['initial_states'].add(i.name)
+            if i.accept:
+                dot['accepting_states'].add(i.name)
+            for j in range(len(i.map)):
+                r = self.__checkpath(t, i.name, i.map[j].name)
+                if r is None:
+                    t[(i.name, self.alpht[j])] = {i.map[j].name}
+                else:
+                    t[(i.name, r[1] + ',' + self.alpht[j])] = t.pop(r)
+
+        dot['transitions'] = t
+        automata_IO.nfa_to_dot(dot, 'nfa')
+
+    def __checkpath(self, t, n1, n2):
+        for i in t:
+            if i[0] == n1 and t[i].__contains__(n2):
+                return i
+        return None
 
 
 class MinimizationPart:
