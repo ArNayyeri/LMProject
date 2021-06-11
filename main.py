@@ -35,7 +35,7 @@ class NFA:
         self.states = []
         self.alpht = []
         self.accepts = []
-        self.start = ''
+        self.start = None
 
     def __addState(self, state1, state2, count):
         for i in state1.map[state1.symbols]:
@@ -45,6 +45,8 @@ class NFA:
             m = []
             for j in state1.map[i]:
                 m.append(j)
+            if len(m) == 0:
+                continue
             if isinstance(state2.map[i], StateDFA):
                 for k in m:
                     if not state2.map[i].statesNFA.__contains__(k):
@@ -63,7 +65,7 @@ class NFA:
 
     def convertDFA(self):
         dfa = DFA()
-        dfa.alpht = self.alpht.copy
+        dfa.alpht = self.alpht
         dfa.start = StateDFA(self.start.name, len(self.alpht))
         dfa.start.statesNFA.append(self.start)
         dfa.states.append(dfa.start)
@@ -75,12 +77,28 @@ class NFA:
             for k in range(len(dfa.states[i].map)):
                 x = self.__isExist(dfa, dfa.states[i].map[k])
                 if x == -1:
-                    dfa.states.append(dfa.states[i].map[k])
+                    if isinstance(dfa.states[i].map[k], StateDFA):
+                        dfa.states.append(dfa.states[i].map[k])
                 else:
                     dfa.states[i].map[k] = dfa.states[x]
             i = i + 1
 
         for i in dfa.states:
+            for j in range(len(i.map)):
+                if i.map[j] == []:
+                    if dfa.trap is None:
+                        t = StateNFA('∅', len(self.alpht))
+                        dfa.trap = StateDFA('∅', len(self.alpht))
+                        dfa.states.append(dfa.trap)
+                        dfa.trap.statesNFA.append(t)
+                        dfa.trap.map[0] = dfa.trap
+                        dfa.trap.map[1] = dfa.trap
+                    i.map[j] = dfa.trap
+        r = 1
+        for i in dfa.states:
+            if i.name != '∅':
+                i.name = 'q' + r
+                r = r + 1
             for j in i.statesNFA:
                 if j in self.accepts:
                     i.accept = True
@@ -94,52 +112,97 @@ class DFA:
         self.states = []
         self.alpht = []
         self.accepts = []
-        self.start = ''
+        self.start = None
+        self.trap = None
+
+    def getstate(self, name):
+        for i in self.states:
+            if name == i.name:
+                return i
+        return None
+
+    def minimization(self):
+        a = MinimizationPart(len(self.alpht))
+        b = MinimizationPart(len(self.alpht))
+
+        for i in self.states:
+            if i.accept:
+                a.states.append(i.name)
+            else:
+                b.states.append(i.name)
+        p0 = [a, b]
+        p1 = []
+
+        while True:
+            for i in p0:
+                for j in i.states:
+                    q = self.getstate(j)
+                    w = MinimizationPart(len(self.alpht))
+                    w.states.append(j)
+                    for k in q.map:
+                        for l in p0:
+                            if l.states.__contains__(k.name):
+                                w.map.append(l)
+                    check = True
+                    for k in p1:
+                        if k.check(w):
+                            k.states.append(j)
+                            check = False
+                            break
+                    if check:
+                        p1.append(w)
+            if len(p0) == len(p1):
+                break
+            p0 = p1
+            p1 = []
+        for i in p1:
+            for j in range(len(i.map)):
+                for k in p1:
+                    if k.check2(i.map[j]):
+                        i.map[j] = k
+        self.accepts.clear()
+        self.trap = None
+        for i in range(len(p1)):
+            p1[i].stateD.name = 'q' + str(i)
+            p1[i].stateD.map.clear()
+            for j in p1[i].states:
+                q = self.getstate(j)
+                if q.start:
+                    p1[i].stateD.start = True
+                    self.start = p1[i].stateD
+                if q.accept:
+                    p1[i].stateD.accept = True
+                    self.accepts.append(p1[i].stateD)
+            for j in p1[i].map:
+                p1[i].stateD.map.append(j.stateD)
+        self.states.clear()
+        for i in p1:
+            self.states.append(i.stateD)
 
 
-def printdfa(e):
-    for i in e.states:
-        for j in i.statesNFA:
-            print(j.name + ',', end='')
-        print('  ', end='')
-        for j in i.map:
-            for k in j.statesNFA:
-                print(k.name + ',', end='')
-            print('  ', end='')
-        print()
+class MinimizationPart:
+    def __init__(self, size):
+        self.states = []
+        self.map = []
+        self.stateD = StateDFA('', size)
 
+    def check(self, other):
+        if len(self.map) != len(other.map):
+            return False
+        for i in range(len(self.map)):
+            if self.map[i] != other.map[i]:
+                return False
+        return True
 
-a = NFA()
-a.alpht = ['a', 'b']
-q0 = StateNFA('q0', 2)
-q1 = StateNFA('q1', 2)
-q2 = StateNFA('q2', 2)
-q0.map[0] = [q0, q1]
-q0.map[1] = [q0]
-q1.map[1] = [q2]
-q0.start = True
-q2.accept = True
-a.start = q0
-a.states = [q0, q1, q2]
-a.accepts.append(q2)
-e = a.convertDFA()
-#printdfa(e)
-
-b = NFA()
-b.alpht = ['0', '1']
-q0 = StateNFA('q0', 2)
-q1 = StateNFA('q1', 2)
-q2 = StateNFA('q2', 2)
-q0.map[0] = [q0]
-q0.map[1] = [q1]
-q1.map[0] = [q1, q2]
-q1.map[1] = [q1]
-q2.map[0] = [q2]
-q2.map[1] = [q1, q2]
-q0.start = True
-q2.accept = True
-b.start = q0
-b.states = [q0, q1, q2]
-b.accepts.append(q2)
-bb = b.convertDFA()
-printdfa(bb)
+    def check2(self, other):
+        if len(self.states) != len(other.states):
+            return False
+        for i in self.states:
+            check = True
+            for j in other.states:
+                if i == j:
+                    check = False
+                    break
+            if check:
+                return False
+        return True
