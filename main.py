@@ -69,6 +69,7 @@ class NFA:
         dfa.start = StateDFA(self.start.name, len(self.alpht))
         dfa.start.statesNFA.append(self.start)
         dfa.states.append(dfa.start)
+        dfa.start.start = True
         count = 1
         i = 0
         while i < len(dfa.states):
@@ -97,7 +98,7 @@ class NFA:
         r = 1
         for i in dfa.states:
             if i.name != '∅':
-                i.name = 'q' + r
+                i.name = 'q' + str(r)
                 r = r + 1
             for j in i.statesNFA:
                 if j in self.accepts:
@@ -178,6 +179,12 @@ class DFA:
         self.states.clear()
         for i in p1:
             self.states.append(i.stateD)
+
+    def checkstring(self, string):
+        q = self.start
+        for i in string:
+            q = q.map[self.alpht.index(i)]
+        return q.accept
 
 
 class MinimizationPart:
