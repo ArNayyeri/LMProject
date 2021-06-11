@@ -1,3 +1,4 @@
+import os
 from PySimpleAutomata import automata_IO
 
 
@@ -147,9 +148,10 @@ class DFA:
                         for l in p0:
                             if l.states.__contains__(k.name):
                                 w.map.append(l)
+                                break
                     check = True
                     for k in p1:
-                        if k.check(w):
+                        if k.check(w) and k.states.__contains__(i.states[0]):
                             k.states.append(j)
                             check = False
                             break
@@ -189,7 +191,7 @@ class DFA:
             q = q.map[self.alpht.index(i)]
         return q.accept
 
-    def showimage(self):
+    def showimage(self, name):
         dot = {'alphabet': set(self.alpht), 'states': set(), 'initial_states': set(), 'accepting_states': set(),
                'transitions': {}}
         t = dict()
@@ -207,7 +209,9 @@ class DFA:
                     t[(i.name, r[1] + ',' + self.alpht[j])] = t.pop(r)
 
         dot['transitions'] = t
-        automata_IO.nfa_to_dot(dot, 'nfa')
+        automata_IO.nfa_to_dot(dot, name)
+        os.remove(name + '.dot')
+        os.rename(name + '.dot.svg', name + '.svg')
 
     def __checkpath(self, t, n1, n2):
         for i in t:
