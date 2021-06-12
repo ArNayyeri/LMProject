@@ -1,5 +1,6 @@
 import os
 from PySimpleAutomata import automata_IO
+from graphviz import Source
 
 
 class StateNFA:
@@ -210,8 +211,25 @@ class DFA:
 
         dot['transitions'] = t
         automata_IO.nfa_to_dot(dot, name)
+        os.remove(name + '.dot.svg')
+        f = open(name + '.dot', 'r')
+        x = f.readline() + f.readline()
+        for i in range(len(self.states)):
+            a = f.readline()
+            if not a.__contains__('doublecircle') and a.__contains__('['):
+                a = a[:len(a) - 2] + ', shape=circle]\n'
+            elif not a.__contains__('['):
+                a = a[:len(a) - 1] + '[shape=circle]\n'
+            x += a
+        a = f.readline()
+        while a != '':
+            x += a
+            a = f.readline()
+        f.close()
         os.remove(name + '.dot')
-        os.rename(name + '.dot.svg', name + '.svg')
+        s = Source(x, filename=name, format='svg')
+        s.render()
+        os.remove(name)
 
     def __checkpath(self, t, n1, n2):
         for i in t:
