@@ -1,6 +1,7 @@
 import os
 from PySimpleAutomata import automata_IO
-from graphviz import Source
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPM
 
 
 class StateNFA:
@@ -9,7 +10,9 @@ class StateNFA:
         self.name = name
         self.accept = False
         self.start = False
-        self.map = [[] * n] * (n + 1)
+        self.map = []
+        for i in range(n + 1):
+            self.map.append([])
 
 
 class StateDFA:
@@ -41,6 +44,12 @@ class NFA:
         self.alpht = []
         self.accepts = []
         self.start = None
+
+    def getstate(self, name):
+        for i in self.states:
+            if name == i.name:
+                return i
+        return None
 
     def __addState(self, state1, state2, count):
         for i in state1.map[state1.symbols]:
@@ -162,6 +171,8 @@ class DFA:
                 break
             p0 = p1
             p1 = []
+        if len(p0) == len(self.states):
+            return
         for i in p1:
             for j in range(len(i.map)):
                 for k in p1:
@@ -189,6 +200,8 @@ class DFA:
     def checkstring(self, string):
         q = self.start
         for i in string:
+            if not self.alpht.__contains__(i):
+                return False
             q = q.map[self.alpht.index(i)]
         return q.accept
 
@@ -211,25 +224,14 @@ class DFA:
 
         dot['transitions'] = t
         automata_IO.nfa_to_dot(dot, name)
-        os.remove(name + '.dot.svg')
-        f = open(name + '.dot', 'r')
-        x = f.readline() + f.readline()
-        for i in range(len(self.states)):
-            a = f.readline()
-            if not a.__contains__('doublecircle') and a.__contains__('['):
-                a = a[:len(a) - 2] + ', shape=circle]\n'
-            elif not a.__contains__('['):
-                a = a[:len(a) - 1] + '[shape=circle]\n'
-            x += a
-        a = f.readline()
-        while a != '':
-            x += a
-            a = f.readline()
-        f.close()
+        if os.path.isfile(name + '.svg'):
+            os.remove(name + '.svg')
+        if os.path.isfile(name + '.png'):
+            os.remove(name + '.png')
         os.remove(name + '.dot')
-        s = Source(x, filename=name, format='svg')
-        s.render()
-        os.remove(name)
+        os.rename(name + '.dot.svg', name + '.svg')
+        drawing = svg2rlg(name + '.svg')
+        renderPM.drawToFile(drawing, name + '.png', fmt='PNG')
 
     def __checkpath(self, t, n1, n2):
         for i in t:
